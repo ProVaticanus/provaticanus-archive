@@ -1,0 +1,24 @@
+name: Sync Substack RSS Feed to Archive
+
+on:
+  schedule:
+    # Automatice currit quotidie media nocte (00:00 UTC)
+    - cron: '0 0 * * *'
+  # Licet quovis tempore manu incipere ex tabula Actions
+  workflow_dispatch:
+
+jobs:
+  build-and-sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Fetch and Convert RSS Posts
+        uses: gautamkrishnar/blog-post-workflow@v1
+        with:
+          feed_list: "https://provaticanus.substack.com/feed"
+          max_post_count: 50
+          commit_message: "scripta: per fluxum RSS automatice renovatum"
