@@ -17,8 +17,7 @@ jobs:
       - name: Fetch and Convert All RSS Feeds
         uses: gautamkrishnar/blog-post-workflow@v1
         with:
-          feed_list: "https://provaticanus.blogspot.com/feeds/posts/default?max-results=500,https://provaticanus.tumblr.com/rss,https://mastodon.social/@ProVaticanus.rss,https://rsshub.app/substack/blog/provaticanus"
+          feed_list: "https://provaticanus.blogspot.com/feeds/posts/default?max-results=500,https://provaticanus.tumblr.com/rss,https://mastodon.social/@ProVaticanus.rss"
           max_post_count: 500
-          ignore_errors: true
           user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-          commit_message: "scripta: per fluxus RSS omnium fontium renovata"
+          commit_message: "scripta: per fluxus RSS renovata"
