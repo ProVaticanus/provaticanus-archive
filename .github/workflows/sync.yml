@@ -1,0 +1,44 @@
+name: YouTube to Tumblr Sync
+
+on:
+  schedule:
+    - cron: '0 */6 * x *' # Runs every 6 hours automatically
+  workflow_dispatch:      # Allows you to manually trigger it anytime
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write     # Required so the script can commit state updates (posted videos) back to repo
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install feedparser pytumblr requests
+
+      - name: Run YouTube to Tumblr Sync
+        env:
+          TUMBLR_CONSUMER_KEY: ${{ secrets.TUMBLR_CONSUMER_KEY }}
+          TUMBLR_CONSUMER_SECRET: ${{ secrets.TUMBLR_CONSUMER_SECRET }}
+          TUMBLR_OAUTH_TOKEN: ${{ secrets.TUMBLR_OAUTH_TOKEN }}
+          TUMBLR_OAUTH_TOKEN_SECRET: ${{ secrets.TUMBLR_OAUTH_TOKEN_SECRET }}
+          TUMBLR_BLOG_NAME: ${{ secrets.TUMBLR_BLOG_NAME }} # Your Tumblr blog identifier (e.g., your-blog.tumblr.com)
+          YOUTUBE_USER_OR_ID: provaticanus
+        run: |
+          python sync.py
+
+      - name: Commit and Push State (Posted Videos Tracking)
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add posted_videos.json || true
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update posted videos state [skip ci]" && git push)
