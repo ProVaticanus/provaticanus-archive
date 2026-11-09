@@ -1,91 +1,32 @@
-import os
-import pytumblr
-import yt_dlp
+name: YouTube to Tumblr Sync
 
-# Channel configuration
-CHANNEL_URL = "https://www.youtube.com/@ProVaticanus/videos"
-STATE_FILE = "synced_videos.txt"
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
-# Tumblr credentials from GitHub Secrets
-CONSUMER_KEY = os.getenv("TUMBLR_CONSUMER_KEY")
-CONSUMER_SECRET = os.getenv("TUMBLR_CONSUMER_SECRET")
-OAUTH_TOKEN = os.getenv("TUMBLR_OAUTH_TOKEN")
-OAUTH_SECRET = os.getenv("TUMBLR_OAUTH_SECRET")
-BLOG_NAME = os.getenv("TUMBLR_BLOG_NAME")
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-def load_synced_ids():
-    if not os.path.exists(STATE_FILE):
-        return set()
-    with open(STATE_FILE, "r", encoding="utf-8") as f:
-        return set(line.strip() for line in f if line.strip())
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-def save_synced_id(video_id):
-    with open(STATE_FILE, "a", encoding="utf-8") as f:
-        f.write(f"{video_id}\n")
+      - name: Install dependencies
+        run: |
+          pip install pytumblr yt-dlp
 
-def fetch_youtube_videos():
-    ydl_opts = {
-        'extract_flat': True,
-        'skip_download': True,
-        'playlistend': 0,  # Fetches all videos (oldest to newest)
-    }
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(CHANNEL_URL, download=False)
-        entries = info.get('entries', [])
-        # Reverse to process oldest videos first when running initial backfill
-        return list(reversed(entries))
-
-def post_to_tumblr(client, video_id, title, description):
-    video_url = f"https://www.youtube.com/watch?v={video_id}"
-    body = f"<h2>{title}</h2><p>{description}</p><p><a href=\"{video_url}\">{video_url}</a></p>"
-    
-    response = client.create_link(
-        BLOG_NAME,
-        url=video_url,
-        title=title,
-        description=body,
-        tags=["ProVaticanus", "YouTube", "History", "Latin"]
-    )
-    return response
-
-def main():
-    synced_ids = load_synced_ids()
-    print(f"Loaded {len(synced_ids)} existing video IDs from state.")
-
-    videos = fetch_youtube_videos()
-    print(f"Found {len(videos)} videos on YouTube channel.")
-
-    if not all([CONSUMER_KEY, CONSUMER_SECRET, OAUTH_TOKEN, OAUTH_SECRET, BLOG_NAME]):
-        print("Error: Missing Tumblr API secrets.")
-        return
-
-    client = pytumblr.TumblrRestClient(
-        CONSUMER_KEY,
-        CONSUMER_SECRET,
-        OAUTH_TOKEN,
-        OAUTH_SECRET
-    )
-
-    new_posts = 0
-    for video in videos:
-        v_id = video.get('id')
-        v_title = video.get('title', 'ProVaticanus Video')
-        v_desc = video.get('description', '')
-
-        if v_id in synced_ids:
-            continue
-
-        print(f"Posting new video to Tumblr: {v_title} ({v_id})")
-        res = post_to_tumblr(client, v_id, v_title, v_desc)
-        
-        if res and 'id' in res:
-            save_synced_id(v_id)
-            new_posts += 1
-            print(f"Successfully posted and saved ID: {v_id}")
-        else:
-            print(f"Failed to post video {v_id}: {res}")
-
-    print(f"Sync complete. Posted {new_posts} new videos.")
-
-if __name__ == "__main__":
-    main()
+      - name: Run sync script
+        env:
+          TUMBLR_CONSUMER_KEY: ${{ secrets.TUMBLR_CONSUMER_KEY }}
+          TUMBLR_CONSUMER_SECRET: ${{ secrets.TUMBLR_CONSUMER_SECRET }}
+          TUMBLR_OAUTH_TOKEN: ${{ secrets.TUMBLR_OAUTH_TOKEN }}
+          TUMBLR_OAUTH_SECRET: ${{ secrets.TUMBLR_OAUTH_SECRET }}
+          TUMBLR_BLOG_NAME: ${{ secrets.TUMBLR_BLOG_NAME }}
+        run: |
+          python sync.py
