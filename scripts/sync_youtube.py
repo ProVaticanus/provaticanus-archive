@@ -1,76 +1,40 @@
-import os
-import xml.etree.ElementTree as ET
-import requests
-import pytumblr
+name: YouTube to Tumblr Sync
 
-# Retrieve environment variables
-CONSUMER_KEY = os.environ['TUMBLR_CONSUMER_KEY']
-CONSUMER_SECRET = os.environ['TUMBLR_CONSUMER_SECRET']
-OAUTH_TOKEN = os.environ['TUMBLR_OAUTH_TOKEN']
-OAUTH_SECRET = os.environ['TUMBLR_OAUTH_SECRET']
-BLOG_NAME = os.environ['TUMBLR_BLOG_NAME']
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Runs every 6 hours
+  workflow_dispatch:      # Allows manual trigger
 
-# Initialize Tumblr client
-client = pytumblr.TumblrRestClient(
-    CONSUMER_KEY,
-    CONSUMER_SECRET,
-    OAUTH_TOKEN,
-    OAUTH_SECRET
-)
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-# File to keep track of posted videos
-STATE_FILE = "synced_videos.txt"
-synced_ids = set()
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
-if os.path.exists(STATE_FILE):
-    with open(STATE_FILE, "r") as f:
-        synced_ids = set(line.strip() for line in f if line.strip())
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytumblr requests yt-dlp
 
-# Direct Channel ID feed URL
-rss_url = "https://www.youtube.com/feeds/videos.xml?channel_id=UCGRizY96gsfts3lWXLWbYLg"
+      - name: Run YouTube to Tumblr Sync
+        env:
+          TUMBLR_CONSUMER_KEY: ${{ secrets.TUMBLR_CONSUMER_KEY }}
+          TUMBLR_CONSUMER_SECRET: ${{ secrets.TUMBLR_CONSUMER_SECRET }}
+          TUMBLR_OAUTH_TOKEN: ${{ secrets.TUMBLR_OAUTH_TOKEN }}
+          TUMBLR_OAUTH_SECRET: ${{ secrets.TUMBLR_OAUTH_SECRET }}
+          TUMBLR_BLOG_NAME: ${{ secrets.TUMBLR_BLOG_NAME }}
+        run: |
+          python scripts/sync_youtube.py
 
-print(f"Fetching RSS feed via requests: {rss_url}")
-
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-    'Accept-Language': 'en-US,en;q=0.5',
-}
-
-response = requests.get(rss_url, headers=headers, timeout=15)
-response.raise_for_status()
-
-root = ET.fromstring(response.content)
-ns = {'atom': 'http://www.w3.org/2005/Atom', 'yt': 'http://www.youtube.com/xml/schemas/2015'}
-
-entries = root.findall('atom:entry', ns)
-entries.reverse() # Process oldest to newest
-
-new_synced = False
-
-for entry in entries:
-    video_id = entry.find('yt:videoId', ns).text
-    title = entry.find('atom:title', ns).text
-    link = entry.find('atom:link', ns).attrib['href']
-    
-    if video_id in synced_ids:
-        continue
-        
-    print(f"Posting video to Tumblr: {title}")
-    client.create_video(
-        BLOG_NAME,
-        embed=f"https://www.youtube.com/watch?v={video_id}",
-        caption=f"<h3>{title}</h3><p><a href=\"{link}\">Watch on YouTube</a></p>"
-    )
-    
-    synced_ids.add(video_id)
-    new_synced = True
-
-# Save updated state
-if new_synced:
-    with open(STATE_FILE, "w") as f:
-        for vid in synced_ids:
-            f.write(f"{vid}\n")
-    print("Updated state file with new videos.")
-else:
-    print("No new videos to post.")
+      - name: Save Sync State
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add synced_videos.txt
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update synced videos state [skip ci]" && git push)
