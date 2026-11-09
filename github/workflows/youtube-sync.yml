@@ -1,0 +1,35 @@
+name: Retroactive YouTube to Tumblr Sync
+
+on:
+  workflow_dispatch:
+
+jobs:
+      sync:
+    runs-on: ubuntu-latest
+    environment: production  # Replace 'production' with your exact environment name if you named it differently
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: pip install feedparser pytumblr
+
+      - name: Run YouTube Sync Script
+        env:
+          TUMBLR_CONSUMER_KEY: ${{ secrets.TUMBLR_CONSUMER_KEY }}
+          TUMBLR_CONSUMER_SECRET: ${{ secrets.TUMBLR_CONSUMER_SECRET }}
+          TUMBLR_OAUTH_TOKEN: ${{ secrets.TUMBLR_OAUTH_TOKEN }}
+          TUMBLR_OAUTH_SECRET: ${{ secrets.TUMBLR_OAUTH_SECRET }}
+          TUMBLR_BLOG_NAME: ${{ secrets.TUMBLR_BLOG_NAME }}
+          YOUTUBE_RSS_URL: "https://www.youtube.com/feeds/videos.xml?channel_id=UCGRizY96gsfts3lWXLWbYLg"
+        run: python scripts/sync_youtube.py
+
+      - name: Commit Sync State
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "scripta: retroactively synced YouTube archive to Tumblr"
