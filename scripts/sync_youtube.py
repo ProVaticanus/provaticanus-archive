@@ -1,6 +1,6 @@
 import os
-import xml.etree.ElementTree as ET
 import urllib.request
+import xml.etree.ElementTree as ET
 import pytumblr
 
 # Retrieve environment variables
@@ -26,13 +26,19 @@ if os.path.exists(STATE_FILE):
     with open(STATE_FILE, "r") as f:
         synced_ids = set(line.strip() for line in f if line.strip())
 
-# Direct Channel ID feed (bypasses broken YOUTUBE_RSS_URL secret)
+# Correct RSS endpoint using the channel ID
 rss_url = "https://www.youtube.com/feeds/videos.xml?channel_id=UCGRizY96gsfts3lWXLWbYLg"
 
 print(f"Fetching RSS feed: {rss_url}")
-req = urllib.request.Request(rss_url, headers={'User-Agent': 'Mozilla/5.0'})
-xml_data = urllib.request.urlopen(req).read()
+req = urllib.request.Request(
+    rss_url, 
+    headers={
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/rss+xml, application/xml, text/xml'
+    }
+)
 
+xml_data = urllib.request.urlopen(req).read()
 root = ET.fromstring(xml_data)
 ns = {'atom': 'http://www.w3.org/2005/Atom', 'yt': 'http://www.youtube.com/xml/schemas/2015'}
 
