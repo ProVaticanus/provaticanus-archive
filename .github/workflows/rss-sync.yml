@@ -1,10 +1,9 @@
-name: Sync Substack RSS Feed to Archive
+name: Sync Multi-Platform Archive to GitHub
 
 on:
   schedule:
-    # Runs automatically every day at 00:00 UTC (Midnight)
+    # Runs automatically every day at 00:00 UTC
     - cron: '0 0 * * *'
-  # Allows manual backfill execution anytime from the Actions tab
   workflow_dispatch:
 
 jobs:
@@ -16,10 +15,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Fetch and Convert RSS Posts
+      - name: Fetch and Convert All RSS Feeds
         uses: gautamkrishnar/blog-post-workflow@v1
         with:
-          feed_list: "https://provaticanus.substack.com/feed"
-          max_post_count: 50
+          feed_list: "https://provaticanus.substack.com/feed,https://provaticanus.blogspot.com/feeds/posts/default?max-results=500,https://provaticanus.tumblr.com/rss,https://mastodon.social/@ProVaticanus.rss"
+          max_post_count: 500
           user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-          commit_message: "scripta: per fluxum RSS automatice renovatum"
+          commit_message: "scripta: per fluxus RSS omnium fontium renovata"
