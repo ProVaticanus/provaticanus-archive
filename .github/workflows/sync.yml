@@ -8,6 +8,8 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -33,3 +35,11 @@ jobs:
           YOUTUBE_RSS_URL: ${{ secrets.YOUTUBE_RSS_URL }}
         run: |
           python scripts/sync_youtube.py
+
+      - name: Save Sync State
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add synced_videos.txt || true
+          git commit -m "Update synced videos log [skip ci]" || true
+          git push || true
