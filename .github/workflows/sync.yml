@@ -1,6 +1,6 @@
 import os
 import pytumblr
-import yt-dlp
+import yt_dlp
 
 # Channel configuration
 CHANNEL_URL = "https://www.youtube.com/@ProVaticanus/videos"
@@ -29,7 +29,7 @@ def fetch_youtube_videos():
         'skip_download': True,
         'playlistend': 0,  # Fetches all videos (oldest to newest)
     }
-    with yt-dlp.YoutubeDL(ydl_opts) as ydl:
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(CHANNEL_URL, download=False)
         entries = info.get('entries', [])
         # Reverse to process oldest videos first when running initial backfill
@@ -78,4 +78,14 @@ def main():
         print(f"Posting new video to Tumblr: {v_title} ({v_id})")
         res = post_to_tumblr(client, v_id, v_title, v_desc)
         
-        if 'id' in
+        if res and 'id' in res:
+            save_synced_id(v_id)
+            new_posts += 1
+            print(f"Successfully posted and saved ID: {v_id}")
+        else:
+            print(f"Failed to post video {v_id}: {res}")
+
+    print(f"Sync complete. Posted {new_posts} new videos.")
+
+if __name__ == "__main__":
+    main()
