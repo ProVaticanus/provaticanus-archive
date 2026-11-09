@@ -30,5 +30,6 @@ jobs:
           TUMBLR_OAUTH_SECRET: ${{ secrets.TUMBLR_OAUTH_SECRET }}
           TUMBLR_BLOG_NAME: ${{ secrets.TUMBLR_BLOG_NAME }}
           YOUTUBE_USER_OR_ID: provaticanus
+          YOUTUBE_RSS_URL: ${{ secrets.YOUTUBE_RSS_URL }}
         run: |
           python scripts/sync_youtube.py
