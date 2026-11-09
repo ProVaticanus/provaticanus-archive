@@ -1,62 +1,72 @@
 import os
-import feedparser
+import xml.etree.ElementTree as ET
+import urllib.request
 import pytumblr
 
-# Load credentials from environment variables
+# Retrieve environment variables
+CONSUMER_KEY = os.environ['TUMBLR_CONSUMER_KEY']
+CONSUMER_SECRET = os.environ['TUMBLR_CONSUMER_SECRET']
+OAUTH_TOKEN = os.environ['TUMBLR_OAUTH_TOKEN']
+OAUTH_SECRET = os.environ['TUMBLR_OAUTH_SECRET']
+BLOG_NAME = os.environ['TUMBLR_BLOG_NAME']
+
+# Initialize Tumblr client
 client = pytumblr.TumblrRestClient(
-    os.environ['TUMBLR_CONSUMER_KEY'],
-    os.environ['TUMBLR_CONSUMER_SECRET'],
-    os.environ['TUMBLR_OAUTH_TOKEN'],
-    os.environ['TUMBLR_OAUTH_SECRET']
+    CONSUMER_KEY,
+    CONSUMER_SECRET,
+    OAUTH_TOKEN,
+    OAUTH_SECRET
 )
 
-blog_name = os.environ['TUMBLR_BLOG_NAME']
-rss_url = os.environ['YOUTUBE_RSS_URL']
+# File to keep track of posted videos
+STATE_FILE = "synced_videos.txt"
+synced_ids = set()
 
-print(f"Fetching feed from {rss_url}...")
-feed = feedparser.parse(rss_url)
+if os.path.exists(STATE_FILE):
+    with open(STATE_FILE, "r") as f:
+        synced_ids = set(line.strip() for line in f if line.strip())
 
-# Track posted IDs to avoid duplication across runs
-posted_ids_file = 'posted_videos.txt'
-if os.path.exists(posted_ids_file):
-    with open(posted_ids_file, 'r') as f:
-        posted_ids = set(f.read().splitlines())
-else:
-    posted_ids = set()
+# Fetch RSS feed
+rss_url = os.environ.get('YOUTUBE_RSS_URL')
+if not rss_url:
+    channel_id = os.environ.get('YOUTUBE_USER_OR_ID', 'provaticanus')
+    rss_url = f"https://www.youtube.com/feeds/videos.xml?user={channel_id}"
 
-new_posts_count = 0
+print(f"Fetching RSS feed: {rss_url}")
+req = urllib.request.Request(rss_url, headers={'User-Agent': 'Mozilla/5.0'})
+xml_data = urllib.request.urlopen(req).read()
 
-# Loop through all historical entries found in the RSS feed
-for entry in reversed(feed.entries):
-    video_id = entry.get('yt_videoid', entry.link)
+root = ET.fromstring(xml_data)
+ns = {'atom': 'http://www.w3.org/2005/Atom', 'yt': 'http://www.youtube.com/xml/schemas/2015'}
+
+entries = root.findall('atom:entry', ns)
+entries.reverse() # Process oldest to newest
+
+new_synced = False
+
+for entry in entries:
+    video_id = entry.find('yt:videoId', ns).text
+    title = entry.find('atom:title', ns).text
+    link = entry.find('atom:link', ns).attrib['href']
     
-    if video_id in posted_ids:
+    if video_id in synced_ids:
         continue
         
-    title = entry.title
-    link = entry.link
-    published = entry.published
-    
-    print(f"Backfilling to Tumblr: {title}")
-    
-    # Create a link post on Tumblr containing the YouTube video link
-    response = client.create_link(
-        blog_name,
-        title=title,
-        url=link,
-        description=f"<p>{title}</p><p><a href='{link}'>Watch on YouTube</a></p>",
-        state="published",
-        date=published
+    print(f"Posting video to Tumblr: {title}")
+    client.create_video(
+        BLOG_NAME,
+        embed=f"https://www.youtube.com/watch?v={video_id}",
+        caption=f"<h3>{title}</h3><p><a href=\"{link}\">Watch on YouTube</a></p>"
     )
     
-    if 'id' in response:
-        posted_ids.add(video_id)
-        new_posts_count += 1
-    else:
-        print(f"Error posting: {response}")
+    synced_ids.add(video_id)
+    new_synced = True
 
-# Save state tracker back to repository
-with open(posted_ids_file, 'w') as f:
-    f.write('\n'.join(posted_ids))
-
-print(f"Retroactive sync complete. Successfully backfilled {new_posts_count} videos.")
+# Save updated state
+if new_synced:
+    with open(STATE_FILE, "w") as f:
+        for vid in synced_ids:
+            f.write(f"{vid}\n")
+    print("Updated state file with new videos.")
+else:
+    print("No new videos to post.")
