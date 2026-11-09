@@ -26,11 +26,10 @@ if os.path.exists(STATE_FILE):
     with open(STATE_FILE, "r") as f:
         synced_ids = set(line.strip() for line in f if line.strip())
 
-# Fetch RSS feed
+# Fetch RSS feed using explicit channel_id
 rss_url = os.environ.get('YOUTUBE_RSS_URL')
 if not rss_url:
-    channel_id = os.environ.get('YOUTUBE_USER_OR_ID', 'provaticanus')
-    rss_url = f"https://www.youtube.com/feeds/videos.xml?user={channel_id}"
+    rss_url = "https://www.youtube.com/feeds/videos.xml?channel_id=UCGRizY96gsfts3lWXLWbYLg"
 
 print(f"Fetching RSS feed: {rss_url}")
 req = urllib.request.Request(rss_url, headers={'User-Agent': 'Mozilla/5.0'})
