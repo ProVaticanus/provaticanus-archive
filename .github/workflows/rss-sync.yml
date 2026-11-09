@@ -2,9 +2,9 @@ name: Sync Substack RSS Feed to Archive
 
 on:
   schedule:
-    # Automatice currit quotidie media nocte (00:00 UTC)
+    # Runs automatically every day at 00:00 UTC (Midnight)
     - cron: '0 0 * * *'
-  # Licet quovis tempore manu incipere ex tabula Actions
+  # Allows manual backfill execution anytime from the Actions tab
   workflow_dispatch:
 
 jobs:
@@ -21,4 +21,5 @@ jobs:
         with:
           feed_list: "https://provaticanus.substack.com/feed"
           max_post_count: 50
+          user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
           commit_message: "scripta: per fluxum RSS automatice renovatum"
