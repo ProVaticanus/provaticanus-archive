@@ -2,14 +2,14 @@ name: YouTube to Tumblr Sync
 
 on:
   schedule:
-    - cron: '0 */6 * x *' # Runs every 6 hours automatically
-  workflow_dispatch:      # Allows you to manually trigger it anytime
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     permissions:
-      contents: write     # Required so the script can commit state updates (posted videos) back to repo
+      contents: write
 
     steps:
       - name: Checkout Repository
@@ -31,7 +31,7 @@ jobs:
           TUMBLR_CONSUMER_SECRET: ${{ secrets.TUMBLR_CONSUMER_SECRET }}
           TUMBLR_OAUTH_TOKEN: ${{ secrets.TUMBLR_OAUTH_TOKEN }}
           TUMBLR_OAUTH_TOKEN_SECRET: ${{ secrets.TUMBLR_OAUTH_TOKEN_SECRET }}
-          TUMBLR_BLOG_NAME: ${{ secrets.TUMBLR_BLOG_NAME }} # Your Tumblr blog identifier (e.g., your-blog.tumblr.com)
+          TUMBLR_BLOG_NAME: ${{ secrets.TUMBLR_BLOG_NAME }}
           YOUTUBE_USER_OR_ID: provaticanus
         run: |
           python sync.py
